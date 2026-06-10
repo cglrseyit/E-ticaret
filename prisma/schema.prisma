@@ -1,0 +1,195 @@
+// Prisma schema — One-product dropshipping store
+// Local dev: SQLite (zero-setup). For production, switch `provider` to "postgresql"
+// and re-add native types like @db.Decimal(10,2) where noted below.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("admin") // admin | staff
+  createdAt    DateTime @default(now())
+}
+
+model Product {
+  id               String           @id @default(cuid())
+  slug             String           @unique
+  name             String
+  shortDescription String
+  description      String // rich text (HTML/markdown)
+  price            Decimal // prod: @db.Decimal(10,2)
+  compareAtPrice   Decimal? // strikethrough "old price"
+  costPrice        Decimal? // supply cost -> profit calc
+  stock            Int              @default(100)
+  sku              String?
+  isActive         Boolean          @default(true)
+  images           ProductImage[]
+  variants         ProductVariant[]
+  reviews          Review[]
+  seoTitle         String?
+  seoDescription   String?
+  videoUrl         String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  url       String
+  alt       String?
+  sortOrder Int     @default(0)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model ProductVariant {
+  id        String  @id @default(cuid())
+  name      String // e.g. "Renk"
+  value     String // e.g. "Siyah"
+  priceDiff Decimal @default(0)
+  stock     Int     @default(100)
+  sortOrder Int     @default(0)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model Review {
+  id                 String   @id @default(cuid())
+  authorName         String
+  rating             Int
+  title              String?
+  body               String
+  isApproved         Boolean  @default(true)
+  isVerifiedPurchase Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  productId          String
+  product            Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model Order {
+  id             String      @id @default(cuid())
+  orderNumber    String      @unique // e.g. BLS-2026-00001
+  status         String      @default("pending") // pending | paid | shipped | delivered | cancelled | refunded
+  customerName   String
+  customerEmail  String
+  customerPhone  String
+  address        String
+  city           String
+  district       String
+  zipCode        String?
+  items          OrderItem[]
+  subtotal       Decimal
+  shippingCost   Decimal     @default(0)
+  discount       Decimal     @default(0)
+  total          Decimal
+  paymentMethod  String      @default("paytr") // paytr | cod
+  paymentStatus  String      @default("unpaid") // unpaid | paid | failed | refunded
+  paymentRef     String? // PayTR merchant_oid
+  couponCode     String?
+  trackingNumber String?
+  cargoCompany   String?
+  note           String?
+  sessionId      String? // analytics matching
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  productName String
+  variantInfo String?
+  quantity    Int
+  unitPrice   Decimal
+
+  @@index([orderId])
+}
+
+model Cart {
+  id        String     @id @default(cuid())
+  sessionId String     @unique
+  items     CartItem[]
+  status    String     @default("active") // active | converted | abandoned
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id          String  @id @default(cuid())
+  cartId      String
+  cart        Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId   String
+  productName String
+  variantInfo String?
+  unitPrice   Decimal
+  quantity    Int
+
+  @@index([cartId])
+}
+
+model VisitorSession {
+  id          String           @id @default(cuid()) // client cookie sessionId
+  firstSeen   DateTime         @default(now())
+  lastSeen    DateTime         @updatedAt
+  userAgent   String?
+  referrer    String?
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  device      String? // mobile | desktop | tablet
+  country     String?
+  isReturning Boolean          @default(false)
+  events      AnalyticsEvent[]
+
+  @@index([lastSeen])
+}
+
+model AnalyticsEvent {
+  id        String         @id @default(cuid())
+  sessionId String
+  session   VisitorSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  type      String // page_view | product_view | time_on_page | add_to_cart | remove_from_cart | checkout_start | checkout_step | purchase | exit_intent
+  path      String?
+  metadata  Json? // e.g. { seconds: 45 } or { quantity: 2 }
+  createdAt DateTime       @default(now())
+
+  @@index([type, createdAt])
+  @@index([sessionId])
+}
+
+model Coupon {
+  id         String    @id @default(cuid())
+  code       String    @unique
+  type       String // percent | fixed
+  value      Decimal
+  isActive   Boolean   @default(true)
+  usageLimit Int?
+  usedCount  Int       @default(0)
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+model SiteSetting {
+  key   String @id // e.g. "free_shipping_threshold", "announcement_bar_text"
+  value String
+}
