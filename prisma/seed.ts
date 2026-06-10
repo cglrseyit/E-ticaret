@@ -160,7 +160,6 @@ async function main() {
       { key: "countdown_end", value: countdownEnd.toISOString() },
       { key: "cod_fee", value: "19.90" },
       { key: "live_viewers_base", value: "23" },
-      { key: "social_proof_count", value: "10.000+" },
       { key: "video_url", value: "" },
       { key: "store_name", value: "NeckPro Store" },
     ],

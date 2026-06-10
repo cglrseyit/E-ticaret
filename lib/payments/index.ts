@@ -1,5 +1,6 @@
 import type { PaymentProvider } from "./provider";
 import { MockPaymentProvider } from "./mock";
+import { PayTRProvider } from "./paytr";
 
 let cached: PaymentProvider | null = null;
 
@@ -9,9 +10,7 @@ export function getPaymentProvider(): PaymentProvider {
   const which = process.env.PAYMENT_PROVIDER ?? "mock";
   switch (which) {
     case "paytr":
-      // Faz 8: return new PayTRProvider() once credentials are configured.
-      // Falls back to mock until then.
-      cached = new MockPaymentProvider();
+      cached = new PayTRProvider();
       break;
     case "mock":
     default:

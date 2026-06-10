@@ -13,7 +13,6 @@ const fields: { key: string; label: string; type?: string; hint?: string }[] = [
   { key: "whatsapp_number", label: "WhatsApp Numarası", hint: "Ülke koduyla, örn: 905555555555" },
   { key: "countdown_end", label: "Kampanya Geri Sayım Bitişi", type: "datetime-local" },
   { key: "live_viewers_base", label: "Canlı İzleyici Taban Değeri", type: "number" },
-  { key: "social_proof_count", label: "Mutlu Müşteri Sayısı (metin)" },
   { key: "video_url", label: "Tanıtım Video URL (embed)" },
 ];
 

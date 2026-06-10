@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import {
   getActiveProduct,
   getReviews,
@@ -11,7 +12,6 @@ import { SiteFooter } from "@/components/landing/site-footer";
 import { ProductGallery } from "@/components/landing/product-gallery";
 import { BuyBox } from "@/components/landing/buy-box";
 import { TrustBadges } from "@/components/landing/trust-badges";
-import { SocialProof } from "@/components/landing/social-proof";
 import { Benefits } from "@/components/landing/benefits";
 import { ProductTabs } from "@/components/landing/product-tabs";
 import { VideoSection } from "@/components/landing/video-section";
@@ -22,10 +22,55 @@ import { FaqSection } from "@/components/landing/faq-section";
 import { FinalCta } from "@/components/landing/final-cta";
 import { StickyBuyBar } from "@/components/landing/sticky-buy-bar";
 import { Section, SectionHeading } from "@/components/landing/section";
+import { ProductJsonLd } from "@/components/landing/product-jsonld";
 import { discountPercent } from "@/lib/utils";
 
 // Always reflect fresh DB content (live viewers, stock, settings).
 export const dynamic = "force-dynamic";
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const [product, settings] = await Promise.all([getActiveProduct(), getSettings()]);
+  const storeName = settings.store_name || "Mağaza";
+  if (!product) {
+    return {
+      title: storeName,
+      description:
+        "Hızlı kargo, güvenli ödeme ve 14 gün koşulsuz iade garantisi.",
+    };
+  }
+
+  const title = product.seoTitle || `${product.name} | ${storeName}`;
+  const description =
+    product.seoDescription ||
+    product.shortDescription ||
+    "Hızlı kargo, güvenli ödeme ve 14 gün koşulsuz iade garantisi.";
+  const image = product.images[0]?.url
+    ? new URL(product.images[0].url, siteUrl).toString()
+    : undefined;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: "/" },
+    openGraph: {
+      type: "website",
+      locale: "tr_TR",
+      siteName: storeName,
+      title,
+      description,
+      url: siteUrl,
+      ...(image && { images: [{ url: image, width: 1200, height: 1200, alt: product.name }] }),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      ...(image && { images: [image] }),
+    },
+  };
+}
 
 export default async function Home() {
   const product = await getActiveProduct();
@@ -82,9 +127,6 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* 6. Social proof */}
-        <SocialProof count={settings.social_proof_count || "10.000+"} />
-
         {/* 5. Benefits */}
         <Benefits />
 
@@ -120,6 +162,14 @@ export default async function Home() {
 
       {/* Mobile sticky add-to-cart */}
       <StickyBuyBar product={product} />
+
+      {/* Rich product structured data for Google */}
+      <ProductJsonLd
+        product={product}
+        reviews={reviews}
+        stats={stats}
+        storeName={storeName}
+      />
     </>
   );
 }
